@@ -14,6 +14,11 @@ class PrinterFan:
         printer.register_event_handler("gcode:request_restart",
                                        self.handle_request_restart)
         self.max_power = config.getfloat('max_power', 1., above=0., maxval=1.)
+        self.min_power = config.getfloat('min_power', default=0., above=0., maxval=1.)
+        if self.min_power >= self.max_power:
+          raise config.error(
+              "'min_power' must be less than 'max_power' in section %s" %
+                  config.section)
         self.kick_start_time = config.getfloat('kick_start_time', 0.1,
                                                minval=0.)
         ppins = printer.lookup_object('pins')
@@ -30,6 +35,8 @@ class PrinterFan:
         self.set_speed(print_time, 0.)
     def set_speed(self, print_time, value):
         value = max(0., min(self.max_power, value * self.max_power))
+        if value < self.min_power:
+            value = 0
         if value == self.last_fan_value:
             return
         print_time = max(self.last_fan_time + FAN_MIN_TIME, print_time)
